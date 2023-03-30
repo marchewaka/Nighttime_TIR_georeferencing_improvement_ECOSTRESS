@@ -1,0 +1,70 @@
+	1. Open image
+	2. Find quality flag file and x and y index files (files with indices referring to quality flag for each pixel, used instead of georeferencing quality flags)
+	3. Prepare cloud mask from quality file
+	4. Prepare additional cloud mask basing on thresholding
+        Assumption is made that histogram of LST in an image forms normal distribution. 
+        Gauss curve is fitted on LST histogram, and cloud threshold is calculated (mu - 1.5sigma)
+        Pixels below the threshold are assumed to be clouds and are used to prepare an additional mask
+	5. Prepare bounding box mask, so that edges related to the bounding box are removed
+	6. Original target cloud mask is dilated 9x9 pixels, to remove all edges
+	7. Find according monthly reference mask
+	8. Open water and cloud reference masks
+	9. Reproject water and cloud reference masks to match target image
+	10. Reference cloud mask is dilated by 9x9 pixels
+	11. Calculate edge image from reference water mask and dilate it by Swiss flag kernel
+	12. Mask the reference edge image with
+		a. Calculated target cloud mask (the one based on thresholding)
+		b. Original dilated target cloud mask
+		c. Reference dilated cloud mask
+		d. target dilated bounding box mask
+	13. Automatically label water bodies in original reference image
+	14. Drop all water bodies below 50 pixels
+	15. Normalize target image for Canny edge (requires 8bit) with 1st and 99th percentile
+	16. Blur target image
+	17. Derive target edge image with Canny edge
+	18. Dilate derived target edges by Swiss flag
+	19. Mask the target edge image with
+		a. Calculated target cloud mask (the one based on thresholding)
+		b. Original dilated target cloud mask
+		c. Reference dilated cloud mask
+		d. target dilated bounding box
+	20. Define test window size to look for matches
+	21. For each label:
+		a. Find reference edge image fragment containing the water body with the given label
+		b. If number of edge pixels in reference water body is lower than 10, continue
+		c. For each position in defined test window:
+			i. Ignore if tested position lays outside of the image
+			ii. Take target edge image fragment to test,
+			iii. Test1: Subtract reference and target from each other
+				1) Calculate the summed absolute difference between reference and target for given position
+			iv. Test2: Sum reference and target edges
+				1) If no matches (value 2) found whatsoever, go to the next lake
+				2) Calculate the number of "2"s for given position
+		d. Test1: find where the summed absolute difference between ref and tar is the lowest
+		e. Test2: find where the number of "2"s is the highest
+		f. Check if there was any overlap whatsoever
+		g. If correct position given by both tests differs by more than 10 pixels, ignore this water body
+		h. The correct matched position is given by Test2 (sum based)
+		i. Calculate values for filtering:
+			i. Validity: number of matching pixels divided by number of all water body pixels in reference edge image
+			ii. Importance:
+				1) +1 if water body has more than 60 matching pixels
+				2) +1 if water body has more than 200 matching pixels
+				3) If water body has more than 100 pixels (at all in reference edge image):
+					a) +1 if matching pixels are located in two or three quadrants 
+					b) +2 if matching pixels are located in four quadrants
+		j. If validity is greater than 0.15 and importance is greater than 2 a key point is derived
+	22. If less than 2 key points are found, the image is left uncorrected
+	23. If exactly 2 key points are found, transformation parameters are fitted only on these two key points
+	24. Calculate all possible non-repetitive combinations of 2 key points
+		a. Fit transformation parameters for each combination
+		b. Transform all the possible target key points with fitted parameters
+		c. Calculate Euclidean distance between reference key points and transformed key points
+	25. Key points, which exceed 3 pixels Euclidean distance in over 80% combinations are removed
+	26. If there are less than 2 key points left, the image is left uncorrected
+	27. Transformation parameters are fitted with the remaining key points
+	28. Remaining target key points are transformed with the fitted transformation parameters
+	29. Euclidean distance between reference key points and transformed target key points is calculated
+	30. If Euclidean distance exceeds 3 pixels, the key point is removed
+	31. Final transformation parameters are fitted with the remaining key points
+    32. Image is resampled with the fitted transformation parameters.
