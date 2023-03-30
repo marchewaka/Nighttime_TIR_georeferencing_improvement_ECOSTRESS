@@ -26,3 +26,4 @@ Please adapt paths to match your folder structure. The georeferenced files are e
 To create plots of matched water body edges, set the variable create_control_plots to True. 
 The output of the script is a GeoTiff image and txt file with parameters: tie point locations and fitted transformation parameters.
 It is possible to include scaling in the transformation, but the minimum number of tie points needs to be adapted. 
+The txt file 'code_description.txt' is a description of the georeferencing_improvement.py processing step for step.
